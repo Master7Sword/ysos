@@ -3,8 +3,8 @@ resolver = "2"
 members = [
     "pkg/elf",
     "pkg/boot",
-    "pkg/kernel"
-]
+    "pkg/kernel",
+    ]
 exclude = ["pkg/app/config", "pkg/app/.cargo"]
 
 [profile.release-with-debug]

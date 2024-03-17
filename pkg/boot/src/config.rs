@@ -17,9 +17,11 @@ pub struct Config<'a> {
     pub cmdline: &'a str,
     /// Load apps into memory, when no fs implemented in kernel
     pub load_apps: bool,
+    /// 加分项：字符串型启动配置变量 log_level
+    pub log_level: &'a str,
 }
 
-const DEFAULT_CONFIG: Config = Config {
+pub const DEFAULT_CONFIG: Config = Config {
     kernel_stack_address: 0xFFFF_FF01_0000_0000,
     kernel_stack_auto_grow: 0,
     kernel_stack_size: 512,
@@ -27,6 +29,9 @@ const DEFAULT_CONFIG: Config = Config {
     kernel_path: "\\KERNEL.ELF",
     cmdline: "",
     load_apps: false,
+    ///////////////////////
+    log_level: "Error",
+    ///////////////////////
 };
 
 impl<'a> Config<'a> {
@@ -65,6 +70,9 @@ impl<'a> Config<'a> {
             "kernel_stack_auto_grow" => self.kernel_stack_auto_grow = r10,
             "cmdline" => self.cmdline = value,
             "load_apps" => self.load_apps = r10 != 0,
+            //////////////////////////////////////
+            "log_level" => self.log_level = value,
+            //////////////////////////////////////
             _ => warn!("undefined config key: {}", key),
         }
     }

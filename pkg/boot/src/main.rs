@@ -8,10 +8,14 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 use alloc::vec;
+use elf::{load_elf, map_physical_memory};
 use uefi::prelude::*;
-use x86_64::registers::control::*;
+use x86_64::{addr, registers::control::*, structures::paging::frame};
 use ysos_boot::*;
 
+//
+use crate::config::Config;
+////
 mod config;
 
 const CONFIG_PATH: &str = "\\EFI\\BOOT\\boot.conf";
@@ -26,12 +30,21 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     let bs = system_table.boot_services();
 
     // 1. Load config
-    let config = { /* FIXME: Load config file */ };
+    let mut config_file = open_file(bs, CONFIG_PATH);
+    let config_content = load_file(bs,&mut config_file);
+    let mut config = Config::parse(&config_content);
 
     info!("Config: {:#x?}", config);
 
     // 2. Load ELF files
-    let elf = { /* FIXME: Load kernel elf file */ };
+    let mut elf_file = open_file(bs,&mut config.kernel_path);
+    let elf_content = load_file(bs,&mut elf_file);
+    let elf = match xmas_elf::ElfFile::new(elf_content){
+        Ok(file) => file,
+        Err(msg) => {
+            panic!("Failed to parse ELF file: {}",msg);
+        }
+    };
 
     unsafe {
         set_entry(elf.header.pt2.entry_point() as usize);
@@ -58,14 +71,29 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     let mut page_table = current_page_table();
 
     // FIXME: root page table is readonly, disable write protect (Cr0)
+    unsafe{
+        Cr0::update(|f| f.remove(Cr0Flags::WRITE_PROTECT))
+    }
 
+    let mut frame_allocator = UEFIFrameAllocator(bs);
     // FIXME: map physical memory to specific virtual address offset
+    elf::map_physical_memory(config.physical_memory_offset, max_phys_addr,&mut page_table,&mut frame_allocator);
 
     // FIXME: load and map the kernel elf file
-
+    elf::load_elf(&elf, config.physical_memory_offset,&mut page_table,&mut frame_allocator);
+    
     // FIXME: map kernel stack
+    elf::map_range(
+        config.kernel_stack_address,
+        config.kernel_stack_size,
+        &mut page_table,
+        &mut frame_allocator,
+    );
 
     // FIXME: recover write protect (Cr0)
+    unsafe{
+        Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT))
+    }
 
     free_elf(bs, elf);
 
