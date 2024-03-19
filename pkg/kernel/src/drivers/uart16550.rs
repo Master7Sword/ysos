@@ -66,7 +66,7 @@ impl SerialPort {
     /// Sends a byte on the serial port.
     pub fn send(&mut self, data: u8) {
         // FIXME: Send a byte on the serial port
-        while(self.is_transmit_empty() == 0){}
+        while self.is_transmit_empty() == 0{}
 
         unsafe{
             PortWriteOnly::new(self.PORT).write(data);

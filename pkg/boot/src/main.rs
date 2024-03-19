@@ -45,6 +45,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
             panic!("Failed to parse ELF file: {}",msg);
         }
     };
+    //panic!("Failed to parse ELF file: {}","msg");
 
     unsafe {
         set_entry(elf.header.pt2.entry_point() as usize);
