@@ -1,4 +1,7 @@
 use super::consts::*;
+use x86_64::structures::idt::InterruptStackFrame;
+use x86_64::structures::idt::InterruptDescriptorTable;
+use core::sync::atomic::{AtomicU64, Ordering};
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt[Interrupts::IrqBase as usize + Irq::Timer as usize]
@@ -7,24 +10,21 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
 
 pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        if inc_counter() % 0x10000 == 0 {
-            info!("Tick! @{}", read_counter());
+        if inc_counter() % 0x2000 == 0 {  // 数字不能太大
+            // info!("Tick! @{}", read_counter());
         }
         super::ack();
     });
 }
 
-static mut COUNTER: u64  = 0; // added 'mut'
+pub static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[inline]
 pub fn read_counter() -> u64 {
-    // FIXME: load counter value
-    COUNTER
+    COUNTER.load(Ordering::SeqCst)
 }
 
 #[inline]
 pub fn inc_counter() -> u64 {
-    // FIXME: read counter value and increase it
-    COUNTER += 1;
-    COUNTER
+    COUNTER.fetch_add(1, Ordering::SeqCst) + 1
 }

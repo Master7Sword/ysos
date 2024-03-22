@@ -54,6 +54,8 @@ impl SerialPort {
             // If serial is not faulty set it in normal operation mode
             // (not-loopback with IRQs enabled and OUT#1 and OUT#2 bits enabled)
             PortWriteOnly::new(self.PORT + 4).write(McrFlags::NORMAL_OPERATION.bits());
+
+            PortWriteOnly::new(self.PORT+1).write(0x01u8); // 实验二新增
         }
         return 0;
     }
@@ -81,12 +83,13 @@ impl SerialPort {
     /// Receives a byte on the serial port no wait.
     pub fn receive(&mut self) -> Option<u8> {
         // FIXME: Receive a byte on the serial port no wait
-        while(self.serial_received() == 0){}
-
-        unsafe{
-            PortReadOnly::<u8>::new(self.PORT).read();
+        if self.serial_received() != 0 {
+            unsafe {
+                Some(PortReadOnly::<u8>::new(self.PORT).read())
+            }
+        } else {
+            None
         }
-        None
     }
 }
 

@@ -8,9 +8,66 @@ use crate::interrupt::consts;
 /// Default physical address of xAPIC
 pub const LAPIC_ADDR: u64 = 0xFEE00000;
 
+use bitflags::bitflags;
+
+bitflags! {
+    /// 定义Local APIC的Spurious Interrupt Vector Register标志位
+    pub struct SpuriousInterruptFlags: u32 {
+        const ENABLE_APIC             = 1 << 8;
+    }
+}
+
+bitflags! {
+    /// 定义Local APIC的LVT Timer Register标志位
+    pub struct LvtTimerFlags: u32 {
+        const MASKED                  = 1 << 16;
+        const PERIODIC                = 1 << 17;
+    }
+}
+
+bitflags! {
+    /// 定义Local APIC的Error Status Register标志位
+    /// 注意：Error Status Register通常用于读取错误状态，这里仅作为示例
+    pub struct ErrorStatusFlags: u32 {
+        const SEND_CHECKSUM_ERROR     = 1 << 0;
+        const RECEIVE_CHECKSUM_ERROR  = 1 << 1;
+        const SEND_ACCEPT_ERROR       = 1 << 2;
+        const RECEIVE_ACCEPT_ERROR    = 1 << 3;
+        // 根据APIC文档，可以继续添加更多标志位
+    }
+}
+
+bitflags! {
+    /// 定义Local APIC的Interrupt Command Register (ICR)标志位
+    pub struct InterruptCommandFlags: u64 {
+        const DESTINATION_FIELD       = 0xFF << 56;
+        const DESTINATION_SHORTHAND   = 0b11 << 18;
+        const TRIGGER_MODE_LEVEL      = 1 << 15;
+        const TRIGGER_MODE_EDGE       = 0 << 15;
+        const DELIVERY_MODE_FIXED     = 0b000 << 8;
+        const DELIVERY_MODE_LOWEST    = 0b001 << 8;
+        const DELIVERY_MODE_SMI       = 0b010 << 8;
+        // 根据APIC文档，可以继续添加更多标志位
+    }
+}
+
+// 使用示例
+fn set_apic_flags() {
+    let mut spurious = SpuriousInterruptFlags::empty();
+    spurious.insert(SpuriousInterruptFlags::ENABLE_APIC);
+
+    let mut lvt_timer = LvtTimerFlags::empty();
+    lvt_timer.insert(LvtTimerFlags::PERIODIC);
+    lvt_timer.insert(LvtTimerFlags::MASKED);
+
+    let mut icr = InterruptCommandFlags::empty();
+    icr.insert(InterruptCommandFlags::DELIVERY_MODE_FIXED);
+    // 设置其他所需标志位
+}
+
 pub struct XApic {
     addr: u64,
-}
+} 
 
 impl XApic {
     pub unsafe fn new(addr: u64) -> Self {
@@ -24,6 +81,12 @@ impl XApic {
     unsafe fn write(&mut self, reg: u32, value: u32) {
         write_volatile((self.addr + reg as u64) as *mut u32, value);
         self.read(0x20); // Local AIPC ID Register
+    }
+    unsafe fn set_lvt_timer(&mut self, flags: LvtTimerFlags, vector: u8) {
+        let mut lvt_timer: u32 = self.read(0x320);
+        lvt_timer.set_bits(0..=7, vector as u32); // 设置Vector
+        lvt_timer.set_bits(16..=17, flags.bits() >> 16); // 应用标志位
+        self.write(0x320, lvt_timer);
     }
 }
 
@@ -51,13 +114,14 @@ impl LocalApic for XApic {
             self.write(0x3E0, 0b1011); // set Timer Divide to 1
             self.write(0x380, 0x20000); // set initial count to 0x20000
 
-            let mut lvt_timer: u32 = self.read(0x320);
-            // clear and set Vector
-            lvt_timer &= !(0xFF);
-            lvt_timer |= consts::Interrupts::IrqBase as u32 + consts::Irq::Timer as u32; // 0x20 and 0
-            lvt_timer &= !(1 << 16); // clear Mask
-            lvt_timer |= 1 << 17; // set Timer Periodic Mode
-            self.write(0x320, lvt_timer);
+            // let mut lvt_timer: u32 = self.read(0x320);
+            // // clear and set Vector
+            // lvt_timer &= !(0xFF);
+            // lvt_timer |= consts::Interrupts::IrqBase as u32 + consts::Irq::Timer as u32; // 0x20 and 0
+            // lvt_timer &= !(1 << 16); // clear Mask
+            // lvt_timer |= 1 << 17; // set Timer Periodic Mode
+            // self.write(0x320, lvt_timer);
+            self.set_lvt_timer(LvtTimerFlags::PERIODIC, consts::Interrupts::IrqBase as u8 + consts::Irq::Timer as u8);
 
             // FIXME: Disable logical interrupt lines (LINT0, LINT1)
 
@@ -83,7 +147,7 @@ impl LocalApic for XApic {
 
             // FIXME: Ack any outstanding interrupts.
 
-            self.write(0x0B0,0); // EOI(End of Interrupt) register
+            self.eoi(); // EOI(End of Interrupt) register
 
             // FIXME: Send an Init Level De-Assert to synchronise arbitration ID's.
 
