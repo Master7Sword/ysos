@@ -131,6 +131,7 @@ impl ProcessInner {
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
+        self.context.save(context);
     }
 
     /// Restore the process's context

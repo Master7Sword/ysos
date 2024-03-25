@@ -60,7 +60,7 @@ pub fn init() {
 
     // kernel process
     /* FIXME: create kernel process */
-    let kproc = Process::new(String::from("new"),None,PageTableContext::new(),Some(kproc_data));
+    let kproc = Process::new(String::from("kernel_process"),None,PageTableContext::new(),Some(kproc_data));
     
     manager::init(kproc);
 
@@ -90,6 +90,7 @@ pub fn print_process_list() {
 pub fn env(key: &str) -> Option<String> {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // FIXME: get current process's environment variable
+        get_process_manager().current().read().env(key)
     })
 }
 

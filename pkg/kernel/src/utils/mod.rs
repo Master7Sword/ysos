@@ -51,7 +51,7 @@ pub fn new_stack_test_thread() {
 fn wait(pid: ProcessId) {
     loop {
         // FIXME: try to get the status of the process
-
+        
         // HINT: it's better to use the exit code
 
         if /* FIXME: is the process exited? */ {

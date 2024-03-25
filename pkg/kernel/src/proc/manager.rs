@@ -1,3 +1,5 @@
+use self::processor::set_pid;
+
 use super::*;
 use crate::memory::{
     self,
@@ -72,26 +74,62 @@ impl ProcessManager {
 
     pub fn save_current(&self, context: &ProcessContext) {
         // FIXME: update current process's tick count
+        let process = self.current();
+        let mut inner = process.write();
+        inner.tick();
         
         // FIXME: update current process's context
-
+        inner.save(context);
+        
         // FIXME: push current process to ready queue if still alive
+        if inner.status() != ProgramStatus::Dead{
+            let mut queue = self.ready_queue.lock();
+            queue.push_back(process.pid());
+        }
+
+        drop(inner); // 释放
     }
 
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
 
         // FIXME: fetch the next process from ready queue
-        let next_process = ProcessId::new();
+        let processes = self.processes.read();
+        let mut process :Option<&Arc<Process>> = None;
+        let mut process_arc:  &Arc<Process>;
+        let mut read_inner: spin::RwLockReadGuard<'_, ProcessInner>;
+        let mut queue = self .ready_queue.lock();
+        let mut next_pid: Option<ProcessId> = None;
+        let mut inner: spin::rwlock::RwLockWriteGuard<'_, ProcessInner>;
+        
 
         // FIXME: check if the next process is ready,
         //        continue to fetch if not ready
+        while true{
+            if let Some(pid) = queue.pop_front() {
+                next_pid = Some(pid);
+                trace!("get next_pid {}",pid);
+            } else{
+                panic!("the PID queue is empty!");
+            }
+            process= processes.get(&next_pid.expect("invalid next_pid"));
+            process_arc= process.expect("invalid process_arc");
+            read_inner = process_arc.read();
+            if read_inner.status() == ProgramStatus::Ready{
+                break;
+            }
+        }
 
         // FIXME: restore next process's context
+        process_arc = process.expect("invalid process_arc");
+        inner = process_arc.write();
+        inner.save(context);
 
         // FIXME: update processor's current pid
+        set_pid(next_pid.expect("invalid next_pid"));
 
         // FIXME: return next process's pid
-        
+        drop(inner);
+        next_pid.expect("Expected a next PID but got None")
     }
 
     pub fn spawn_kernel_thread(
