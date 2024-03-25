@@ -37,6 +37,7 @@ pub struct ProcessManager {
     ready_queue: Mutex<VecDeque<ProcessId>>,
 }
 
+// lab3有个莫名其妙的处理函数尚未实现，等到wait_pid要用的时候再写
 impl ProcessManager {
     pub fn new(init: Arc<Process>) -> Self {
         let mut processes = BTreeMap::new();
@@ -63,7 +64,7 @@ impl ProcessManager {
     }
 
     #[inline]
-    fn get_proc(&self, pid: &ProcessId) -> Option<Arc<Process>> {
+    pub fn get_proc(&self, pid: &ProcessId) -> Option<Arc<Process>> {
         self.processes.read().get(pid).cloned()
     }
 
@@ -132,6 +133,7 @@ impl ProcessManager {
         next_pid.expect("Expected a next PID but got None")
     }
 
+    // 创建内核进程
     pub fn spawn_kernel_thread(
         &self,
         entry: VirtAddr,
@@ -146,12 +148,17 @@ impl ProcessManager {
         let stack_top = proc.alloc_init_stack();
 
         // FIXME: set the stack frame
+        ProcessContext::init_stack_frame(proc.write().get_process_context(), entry, stack_top);
 
         // FIXME: add to process map
+        let new_pid = proc.pid();
+        self.add_proc(new_pid, proc.clone());
 
         // FIXME: push to ready queue
+        self.push_ready(new_pid);
 
         // FIXME: return new process pid
+        new_pid
     }
 
     pub fn kill_current(&self, ret: isize) {
@@ -165,7 +172,7 @@ impl ProcessManager {
     }
 
     pub fn kill(&self, pid: ProcessId, ret: isize) {
-        let proc = self.get_proc(&pid);
+        let proc: Option<Arc<Process>> = self.get_proc(&pid);
 
         if proc.is_none() {
             warn!("Process #{} not found.", pid);
@@ -201,4 +208,6 @@ impl ProcessManager {
 
         print!("{}", output);
     }
+
+    
 }

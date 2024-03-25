@@ -2,11 +2,13 @@ use super::*;
 use crate::memory::*;
 use alloc::sync::Weak;
 use alloc::vec::Vec;
+use boot::current_page_table;
 use spin::*;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
 use alloc::sync::Arc;
+
 
 #[derive(Clone)]
 pub struct Process {
@@ -89,8 +91,20 @@ impl Process {
 
     pub fn alloc_init_stack(&self) -> VirtAddr {
         // FIXME: alloc init stack base on self pid
+        let pid = self.pid().0 as u64;
+        let addr = STACK_MAX - pid*STACK_MAX_SIZE;
+        let count = STACK_MAX_SIZE / FRAME_SIZE;
+        let mut page_table = current_page_table();
+        let frame_allocator = &mut *get_frame_alloc_for_sure();
 
-        VirtAddr::new(0)
+        elf::map_range(
+            addr,
+            count,
+            &mut page_table,
+            frame_allocator,
+        );
+
+        VirtAddr::new(STACK_INIT_TOP - (pid-1)*STACK_MAX_SIZE) // pid从1开始算
     }
 }
 
@@ -152,6 +166,11 @@ impl ProcessInner {
         // FIXME: set status to dead
 
         // FIXME: take and drop unused resources
+    }
+
+    // 辅助函数，获取ProcessContext
+    pub fn get_process_context(&mut self) -> &mut ProcessContext{
+        &mut self.context
     }
 }
 

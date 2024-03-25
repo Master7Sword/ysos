@@ -1,12 +1,12 @@
 mod context;
 mod data;
-mod manager;
+pub mod manager;
 mod paging;
 mod pid;
 mod process;
 mod processor;
 
-use manager::*;
+pub use manager::*;
 use process::*;
 use crate::memory::PAGE_SIZE;
 
