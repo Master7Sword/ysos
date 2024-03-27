@@ -95,15 +95,18 @@ impl ProcessManager {
         while let Some(next) = self.ready_queue.lock().pop_front() {
             let map = self.processes.read();
             let proc = map.get(&next).expect("Process not found");
-
+            
             if !proc.read().is_ready() {
                 continue;
             }
-
+            
             if pid != next {
+                //println!("Before switching, current status:{:?}, next status:{:?}, current pid:{:?}, next pid:{:?},",self.current().read().status(),proc.read().status(),self.current().pid(),proc.pid());
                 proc.write().restore(context);
                 processor::set_pid(next);
                 pid = next;
+                //println!("After switching, current status:{:?}, next status:{:?}, current pid:{:?}, next pid:{:?},",self.current().read().status(),proc.read().status(),self.current().pid(),proc.pid());
+
             }
             break;
         }
@@ -154,13 +157,15 @@ impl ProcessManager {
         // FIXME: handle page fault
         let process = self.current();
         let pid = process.pid().0 as u64;
-        let min_addr = STACK_MAX - (pid-1)*STACK_MAX_SIZE;
+        let min_addr = STACK_MAX - (pid)*STACK_MAX_SIZE;
         let max_addr = min_addr + STACK_MAX_SIZE;
-        let addr = addr.as_u64();
-        // if err_code == PageFaultErrorCode::PROTECTION_VIOLATION && addr >= min_addr && addr <= max_addr{
-        //     process.alloc_init_stack();
-        //     return true
-        // }
+        let addr_u64 = addr.as_u64();
+        println!("addr:{}, min_addr:{}, max_addr{}",addr_u64,min_addr,max_addr);
+        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) && addr_u64 >= min_addr && addr_u64 <= max_addr{
+            info!("handling...");
+            process.write().alloc_new_stack_page(addr);
+            return true
+        }
         false
     }
 

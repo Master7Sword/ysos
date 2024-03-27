@@ -13,14 +13,17 @@ pub struct ProcessData {
     pub(super) env: Arc<RwLock<BTreeMap<String, String>>>,
 
     // process specific data
-    pub(super) stack_segment: Option<PageRange>
+    pub(super) stack_segment: Option<PageRange>,
+
+    pub(super) stack_memory_usage: usize,
 }
 
 impl Default for ProcessData {
     fn default() -> Self {
         Self {
             env: Arc::new(RwLock::new(BTreeMap::new())),
-            stack_segment: None
+            stack_segment: None,
+            stack_memory_usage: 0,
         }
     }
 }

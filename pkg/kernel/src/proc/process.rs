@@ -97,7 +97,7 @@ impl Process {
         let mut page_table = self.read().page_table.as_ref().unwrap().mapper();
         let frame_allocator = &mut *get_frame_alloc_for_sure();
         //println!("pid = {}, addr = {}, count = {}",pid,addr,count);
-        let _ =elf::map_range(
+        let _ = elf::map_range(
             addr,
             count,
             &mut page_table,
@@ -169,10 +169,12 @@ impl ProcessInner {
 
     pub fn kill(&mut self, ret: isize) {
         // FIXME: set exit code
-
+        self.exit_code = Some(ret);
         // FIXME: set status to dead
-
+        self.status = ProgramStatus::Dead;
         // FIXME: take and drop unused resources
+        self.proc_data.take();
+        self.page_table.take();
     }
 
     // 辅助函数，获取ProcessContext
@@ -182,6 +184,19 @@ impl ProcessInner {
 
     pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.context.init_stack_frame(entry, stack_top);
+    }
+
+    pub fn alloc_new_stack_page(&mut self,addr: VirtAddr){
+        let alloc = &mut *get_frame_alloc_for_sure();
+        let new_start_page = Page::<Size4KiB>::containing_address(addr);
+        let old_stack = self.proc_data.as_ref().unwrap().stack_segment.unwrap();
+
+        let pages = old_stack.start - new_start_page;
+        let page_table = &mut self.page_table.as_mut().unwrap().mapper();
+        //info!("before map_range");
+        elf::map_range(addr.as_u64(), pages, page_table, alloc);
+        //info!("after map_range");
+
     }
     
 }

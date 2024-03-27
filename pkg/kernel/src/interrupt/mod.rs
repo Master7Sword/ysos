@@ -13,7 +13,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         unsafe {
             exceptions::register_idt(&mut idt);
-            clock::register_idt(&mut idt);
+            clock::reg_idt(&mut idt);
             serial::register_idt(&mut idt);
             //info!("IDT loaded!");
         }
