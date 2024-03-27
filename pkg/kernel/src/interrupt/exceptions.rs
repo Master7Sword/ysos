@@ -1,6 +1,7 @@
 use crate::memory::*;
 use x86_64::registers::control::Cr2;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use x86_64::VirtAddr;
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt.divide_error.set_handler_fn(divide_error_handler);
@@ -22,7 +23,6 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt.bound_range_exceeded.set_handler_fn(bound_range_exceeded_handler);
     idt.device_not_available.set_handler_fn(device_not_available_handler);
     idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
-    idt.general_protection_fault.set_handler_fn(general_protection_fault_handler);
     idt.invalid_tss.set_handler_fn(invalid_tss_handler);
     idt.segment_not_present.set_handler_fn(segment_not_present_handler);
     idt.stack_segment_fault.set_handler_fn(stack_segment_fault_handler);
@@ -118,14 +118,17 @@ pub extern "x86-interrupt" fn page_fault_handler(
     stack_frame: InterruptStackFrame,
     err_code: PageFaultErrorCode,
 ) {
-    panic!(
-        "EXCEPTION: PAGE FAULT, ERROR_CODE: {:?}\n\nTrying to access: {:#x}\n{:#?}",
-        err_code,
-        Cr2::read(),
-        stack_frame
-    );
+    if !crate::proc::handle_page_fault(Cr2::read().unwrap_or(VirtAddr::new(0xdeadbeef)), err_code) {
+        warn!(
+            "EXCEPTION: PAGE FAULT, ERROR_CODE: {:?}\n\nTrying to access: {:#x}\n{:#?}",
+            err_code,
+            Cr2::read().unwrap_or(VirtAddr::new(0xdeadbeef)),
+            stack_frame
+        );
+        // FIXME: print info about which process causes page fault?
+        panic!("Cannot handle page fault!");
+    }
 }
-
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: BREAKPOINT\n\n{:#?}", stack_frame);
 }

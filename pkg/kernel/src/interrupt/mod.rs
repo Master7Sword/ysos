@@ -39,7 +39,7 @@ pub fn init() {
     IDT.load();
 
     // FIXME: check and init APIC
-    let mut Apic = unsafe{XApic::new(LAPIC_ADDR)};
+    let mut Apic = unsafe{XApic::new(physical_to_virtual(LAPIC_ADDR))};
     if XApic::support(){
         Apic.cpu_init();
     }

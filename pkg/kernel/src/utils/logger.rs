@@ -7,8 +7,6 @@ pub fn init() {
 
     // FIXME: Configure the logger
     log::set_max_level(log::LevelFilter::Info);
-    //let log_level = parse_log_level(config.log_level);
-    //log::set_max_level(log_level);
 
     info!("Logger Initialized.");
 }

@@ -92,19 +92,21 @@ impl Process {
     pub fn alloc_init_stack(&self) -> VirtAddr {
         // FIXME: alloc init stack base on self pid
         let pid = self.pid().0 as u64;
-        let addr = STACK_MAX - pid*STACK_MAX_SIZE;
-        let count = STACK_MAX_SIZE / FRAME_SIZE;
-        let mut page_table = current_page_table();
+        let addr = STACK_INIT_BOT - (pid-1)*STACK_MAX_SIZE;
+        let count = STACK_DEF_PAGE;
+        let mut page_table = self.read().page_table.as_ref().unwrap().mapper();
         let frame_allocator = &mut *get_frame_alloc_for_sure();
-
-        elf::map_range(
+        //println!("pid = {}, addr = {}, count = {}",pid,addr,count);
+        let _ =elf::map_range(
             addr,
             count,
             &mut page_table,
             frame_allocator,
         );
+        
+        self.write().set_stack(VirtAddr::new(addr), count);
 
-        VirtAddr::new(STACK_INIT_TOP - (pid-1)*STACK_MAX_SIZE) // pid从1开始算
+        VirtAddr::new(STACK_INIT_TOP - (pid-1)*STACK_MAX_SIZE) // pid从2开始算
     }
 }
 
@@ -146,14 +148,19 @@ impl ProcessInner {
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
         self.context.save(context);
+        if self.status == ProgramStatus::Running {
+            self.status = ProgramStatus::Ready;
+        }
     }
 
     /// Restore the process's context
     /// mark the process as running
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
         // FIXME: restore the process's context
-
+        self.context.restore(context);
         // FIXME: restore the process's page table
+        self.page_table.as_ref().unwrap().load();
+        self.status = ProgramStatus::Running;
     }
 
     pub fn parent(&self) -> Option<Arc<Process>> {
@@ -172,6 +179,11 @@ impl ProcessInner {
     pub fn get_process_context(&mut self) -> &mut ProcessContext{
         &mut self.context
     }
+
+    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+        self.context.init_stack_frame(entry, stack_top);
+    }
+    
 }
 
 impl core::ops::Deref for Process {

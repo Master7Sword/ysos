@@ -1,4 +1,4 @@
-use self::processor::set_pid;
+use self::processor::{set_pid, Processor};
 
 use super::*;
 use crate::memory::{
@@ -19,9 +19,7 @@ pub fn init(init: Arc<Process>) {
     inner.resume();
     drop(inner); // 释放写锁
     // FIXME: set processor's current pid to init's pid
-    PROCESS_MANAGER.call_once(|| ProcessManager::new(init.clone()));
-    let manager = PROCESS_MANAGER.get().expect("Process Manager should be initialized!");
-    manager.push_ready(init.pid());
+    set_pid(init.pid());
 
     PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
 }
@@ -84,8 +82,7 @@ impl ProcessManager {
         
         // FIXME: push current process to ready queue if still alive
         if inner.status() != ProgramStatus::Dead{
-            let mut queue = self.ready_queue.lock();
-            queue.push_back(process.pid());
+            self.push_ready(process.pid());
         }
 
         drop(inner); // 释放
@@ -93,44 +90,24 @@ impl ProcessManager {
 
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
 
-        // FIXME: fetch the next process from ready queue
-        let processes = self.processes.read();
-        let mut process :Option<&Arc<Process>> = None;
-        let mut process_arc:  &Arc<Process>;
-        let mut read_inner: spin::RwLockReadGuard<'_, ProcessInner>;
-        let mut queue = self .ready_queue.lock();
-        let mut next_pid: Option<ProcessId> = None;
-        let mut inner: spin::rwlock::RwLockWriteGuard<'_, ProcessInner>;
-        
+        let mut pid = self.current().pid();
 
-        // FIXME: check if the next process is ready,
-        //        continue to fetch if not ready
-        while true{
-            if let Some(pid) = queue.pop_front() {
-                next_pid = Some(pid);
-                trace!("get next_pid {}",pid);
-            } else{
-                panic!("the PID queue is empty!");
+        while let Some(next) = self.ready_queue.lock().pop_front() {
+            let map = self.processes.read();
+            let proc = map.get(&next).expect("Process not found");
+
+            if !proc.read().is_ready() {
+                continue;
             }
-            process= processes.get(&next_pid.expect("invalid next_pid"));
-            process_arc= process.expect("invalid process_arc");
-            read_inner = process_arc.read();
-            if read_inner.status() == ProgramStatus::Ready{
-                break;
+
+            if pid != next {
+                proc.write().restore(context);
+                processor::set_pid(next);
+                pid = next;
             }
+            break;
         }
-
-        // FIXME: restore next process's context
-        process_arc = process.expect("invalid process_arc");
-        inner = process_arc.write();
-        inner.save(context);
-
-        // FIXME: update processor's current pid
-        set_pid(next_pid.expect("invalid next_pid"));
-
-        // FIXME: return next process's pid
-        drop(inner);
-        next_pid.expect("Expected a next PID but got None")
+        pid
     }
 
     // 创建内核进程
@@ -146,16 +123,24 @@ impl ProcessManager {
 
         // alloc stack for the new process base on pid
         let stack_top = proc.alloc_init_stack();
+        //info!("alloc_init_stack success!");
 
         // FIXME: set the stack frame
-        ProcessContext::init_stack_frame(proc.write().get_process_context(), entry, stack_top);
+        let mut inner = proc.write();
+        inner.pause();
+        inner.init_stack_frame(entry,stack_top);
+        
+        //info!("init_stack_frame success!");
 
         // FIXME: add to process map
         let new_pid = proc.pid();
+        info!("Spawn process: {}#{}", inner.name(), new_pid);
+        drop(inner);
         self.add_proc(new_pid, proc.clone());
 
         // FIXME: push to ready queue
         self.push_ready(new_pid);
+        //info!("push_ready success!");
 
         // FIXME: return new process pid
         new_pid
@@ -167,7 +152,15 @@ impl ProcessManager {
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
         // FIXME: handle page fault
-
+        let process = self.current();
+        let pid = process.pid().0 as u64;
+        let min_addr = STACK_MAX - (pid-1)*STACK_MAX_SIZE;
+        let max_addr = min_addr + STACK_MAX_SIZE;
+        let addr = addr.as_u64();
+        // if err_code == PageFaultErrorCode::PROTECTION_VIOLATION && addr >= min_addr && addr <= max_addr{
+        //     process.alloc_init_stack();
+        //     return true
+        // }
         false
     }
 

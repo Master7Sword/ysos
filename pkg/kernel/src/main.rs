@@ -10,7 +10,7 @@ boot::entry_point!(kernel_main);
 
 pub fn kernel_main(boot_info: &'static boot::BootInfo) -> ! {
     ysos::init(boot_info);
-
+    
     // FIXME: update lib.rs to pass following tests
 
     // 1. run some (about 5) "test", show these threads are running concurrently

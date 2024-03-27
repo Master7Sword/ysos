@@ -70,7 +70,8 @@ pub fn init() {
 pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // FIXME: switch to the next process
-        
+        get_process_manager().save_current(context);
+        get_process_manager().switch_next(context);
     });
 }
 

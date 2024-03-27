@@ -42,8 +42,8 @@ pub fn init(boot_info: &'static BootInfo) {
     interrupt::init(); // init interrupts
     memory::init(boot_info); // init memory manager
     proc::init();
-
-    x86_64::instructions::interrupts::enable();
+    info!("1111111111111111111");
+    x86_64::instructions::interrupts::enable(); 
     info!("Interrupts Enabled.");
 
     info!("YatSenOS initialized.");

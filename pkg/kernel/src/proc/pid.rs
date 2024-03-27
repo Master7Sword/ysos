@@ -8,7 +8,7 @@ static PID_COUNTER: AtomicU16 = AtomicU16::new(1);
 impl ProcessId {
     pub fn new() -> Self {
         // FIXME: Get a unique PID
-        let pid = PID_COUNTER.fetch_add(1, Ordering::SeqCst); // 严格的内存顺序
+        let pid = PID_COUNTER.fetch_add(1, Ordering::SeqCst); 
         ProcessId(pid)
     }
 }

@@ -7,7 +7,7 @@ use crate::drivers::input::push_key;
 
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
-    idt[Interrupts::IrqBase as usize + Irq::Serial0 as usize]
+    idt[Interrupts::IrqBase as u8 + Irq::Serial0 as u8]
         .set_handler_fn(serial_handler);
 }
 
