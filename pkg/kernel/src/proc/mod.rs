@@ -66,7 +66,7 @@ pub fn init(boot_info: &'static boot::BootInfo) {
     // manager::init(kproc);
 
     // lab4 新增
-    let mut app_list = boot_info.loaded_apps.as_ref().expect("invalid app_list");
+    let app_list = boot_info.loaded_apps.as_ref().expect("invalid app_list");
     manager::init(kproc,  app_list);
 
     info!("Process Manager Initialized.");

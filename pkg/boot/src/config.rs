@@ -28,7 +28,7 @@ pub const DEFAULT_CONFIG: Config = Config {
     physical_memory_offset: 0xFFFF_8000_0000_0000,
     kernel_path: "\\KERNEL.ELF",
     cmdline: "",
-    load_apps: true,
+    load_apps: false,
     ///////////////////////
     log_level: "Error",
     ///////////////////////
@@ -47,14 +47,16 @@ impl<'a> Config<'a> {
             // parse 'key=value'
             if let Some((key, value)) = line.split_once('=') {
                 config.process(key, value);
+                //info!("key:{}, value:{}",key,value);
             }
         }
         config
     }
 
     fn process(&mut self, key: &str, value: &'a str) {
-        info!("parse {} = {}", key, value);
+        //info!("parse {} = {}", key, value);
         let r10 = u64::from_str(value).unwrap_or(0);
+        //info!("r10 = {}",r10);
         let r16 = if value.len() > 2 {
             u64::from_str_radix(&value[2..], 16).unwrap_or(0)
         } else {
@@ -75,5 +77,6 @@ impl<'a> Config<'a> {
             //////////////////////////////////////
             _ => warn!("undefined config key: {}", key),
         }
+        //info!("self.load_apps = {}",self.load_apps);
     }
 }
