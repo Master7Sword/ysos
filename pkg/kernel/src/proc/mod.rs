@@ -18,6 +18,7 @@ pub use pid::ProcessId;
 
 use x86_64::structures::idt::PageFaultErrorCode;
 use x86_64::VirtAddr;
+use alloc::vec::Vec;
 
 // 0xffff_ff00_0000_0000 is the kernel's address space
 pub const STACK_MAX: u64 = 0x0000_4000_0000_0000;
@@ -50,7 +51,7 @@ pub enum ProgramStatus {
 }
 
 /// init process manager
-pub fn init() {
+pub fn init(boot_info: &'static boot::BootInfo) {
     let mut kproc_data = ProcessData::new();
 
     // FIXME: set the kernel stack
@@ -62,7 +63,11 @@ pub fn init() {
     /* FIXME: create kernel process */
     let kproc = Process::new(String::from("kernel_process"),None,PageTableContext::new(),Some(kproc_data));
     
-    manager::init(kproc);
+    // manager::init(kproc);
+
+    // lab4 新增
+    let mut app_list = boot_info.loaded_apps.as_ref().expect("invalid app_list");
+    manager::init(kproc,  app_list);
 
     info!("Process Manager Initialized.");
 }
@@ -109,4 +114,25 @@ pub fn handle_page_fault(addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
     x86_64::instructions::interrupts::without_interrupts(|| {
         get_process_manager().handle_page_fault(addr, err_code)
     })
+}
+
+pub fn list_app() {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let app_list = get_process_manager().app_list();
+        if app_list.is_none() {
+            println!("[!] No app found in list!");
+            return;
+        }
+
+        let apps = app_list
+            .unwrap()
+            .iter()
+            .map(|app| app.name.as_str())
+            .collect::<Vec<&str>>()
+            .join(", ");
+
+        // TODO: print more information like size, entry point, etc.
+
+        println!("[+] App list: {}", apps);
+    });
 }

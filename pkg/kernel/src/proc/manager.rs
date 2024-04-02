@@ -1,4 +1,5 @@
 use self::processor::{set_pid, Processor};
+use arrayvec::ArrayVec;
 
 use super::*;
 use crate::memory::{
@@ -7,19 +8,23 @@ use crate::memory::{
     get_frame_alloc_for_sure, PAGE_SIZE,
 };
 use alloc::{collections::*, format};
+use boot::AppListRef;
 use spin::{Mutex, RwLock};
 use alloc::sync::Arc;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
-pub fn init(init: Arc<Process>) {
+pub fn init(init: Arc<Process>, apps:AppListRef) {
 
     // FIXME: set init process as Running
     let mut inner = init.write();
     inner.resume();
+    // 思考题：这里把进程管理器初始化后的状态设置为Ready，看看有什么问题
+    //inner.pause();
     drop(inner); // 释放写锁
     // FIXME: set processor's current pid to init's pid
     set_pid(init.pid());
+
 
     PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
 }
@@ -30,9 +35,15 @@ pub fn get_process_manager() -> &'static ProcessManager {
         .expect("Process Manager has not been initialized")
 }
 
+// lab4新增，辅助app_list初始化
+lazy_static! {
+    static ref GLOBAL_APP_LIST: boot::AppList = ArrayVec::new();
+}
+
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,
     ready_queue: Mutex<VecDeque<ProcessId>>,
+    app_list: boot::AppListRef<'static>,
 }
 
 // lab3有个莫名其妙的处理函数尚未实现，等到wait_pid要用的时候再写
@@ -48,6 +59,8 @@ impl ProcessManager {
         Self {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
+            // 这里初始化还尚未确定是否正确
+            app_list: &GLOBAL_APP_LIST,
         }
     }
 
@@ -207,5 +220,12 @@ impl ProcessManager {
         print!("{}", output);
     }
 
+    pub fn app_list(&self) -> Option<boot::AppListRef<'static>> {
+        if self.app_list.is_empty() {
+            None
+        } else {
+            Some(self.app_list)
+        }
+    }
     
 }

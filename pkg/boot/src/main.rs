@@ -91,6 +91,15 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
         &mut frame_allocator,
     );
 
+    // lab4 新增
+    let apps = if config.load_apps {
+        info!("Loading apps...");
+        Some(load_apps(system_table.boot_services()))
+    } else {
+        info!("Skip loading apps");
+        None
+    };
+
     // FIXME: recover write protect (Cr0)
     unsafe{
         Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT))
@@ -104,11 +113,14 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     let (runtime, mmap) = system_table.exit_boot_services(MemoryType::LOADER_DATA);
     // NOTE: alloc & log are no longer available
 
+    
+
     // construct BootInfo
     let bootinfo = BootInfo {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table: runtime,
+        loaded_apps: apps,
     };
 
     // align stack to 8 bytes

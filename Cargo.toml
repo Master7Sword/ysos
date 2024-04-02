@@ -4,7 +4,10 @@ members = [
     "pkg/elf",
     "pkg/boot",
     "pkg/kernel",
-    ]
+    "pkg/syscall",
+    "pkg/lib",
+    "pkg/app/*"
+]
 exclude = ["pkg/app/config", "pkg/app/.cargo"]
 
 [profile.release-with-debug]
