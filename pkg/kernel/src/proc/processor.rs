@@ -12,7 +12,7 @@ const EMPTY: Processor = Processor::new(); // means no process
 static PROCESSORS: [Processor; MAX_CPU_COUNT] = [EMPTY; MAX_CPU_COUNT];
 
 /// Returns the current processor based on the current APIC ID
-fn current() -> &'static Processor {
+pub fn current() -> &'static Processor {
     let cpuid = CpuId::new()
         .get_feature_info()
         .unwrap()

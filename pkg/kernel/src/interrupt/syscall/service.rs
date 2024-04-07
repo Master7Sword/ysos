@@ -3,36 +3,63 @@ use core::alloc::Layout;
 use crate::proc::*;
 use crate::utils::*;
 
+use self::processor::current;
+
 use super::SyscallArgs;
 
 pub fn spawn_process(args: &SyscallArgs) -> usize {
     // FIXME: get app name by args
-    //       - core::str::from_utf8_unchecked
-    //       - core::slice::from_raw_parts
+    //       - core::str::from_utf8_unchecked  将字节切片转换为字符串切片
+    //       - core::slice::from_raw_parts     接受裸指针和长度，返回切片
+    let name = unsafe{
+        core::str::from_utf8_unchecked(core::slice::from_raw_parts(args.arg0 as *const u8, args.arg1))
+    };
     // FIXME: spawn the process by name
+    let pid = crate::proc::spawn(name);
     // FIXME: handle spawn error, return 0 if failed
+    if !pid.is_some(){
+        warn!("spawn error!");
+        return 0;
+    }
     // FIXME: return pid as usize
-
-    0
+    
+    u16::from(pid.unwrap()) as usize
 }
 
 pub fn sys_write(args: &SyscallArgs) -> usize {
     // FIXME: get buffer and fd by args
     //       - core::slice::from_raw_parts
+    let buffer = unsafe{
+        core::slice::from_raw_parts(args.arg1 as *const u8, args.arg2)
+    };
+    let fd = args.arg0 as u8;
     // FIXME: call proc::write -> isize
+    let pid = current().get_pid().unwrap();
+    let proc = get_process_manager().get_proc(&pid).unwrap();
+    let proc_data = proc.get_data_mut();
+    let result = proc_data.write(fd, buffer);
     // FIXME: return the result as usize
-
-    0
+    
+    result as usize
 }
 
 pub fn sys_read(args: &SyscallArgs) -> usize {
-    // FIXME: just like sys_write
+    let mut buffer = unsafe{
+        core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2)
+    };
+    let fd = args.arg0 as u8;
 
-    0
+    let pid = current().get_pid().unwrap();
+    let proc = get_process_manager().get_proc(&pid).unwrap();
+    let proc_data = proc.get_data_mut();
+    let result = proc_data.read(fd, buffer);
+  
+    result as usize
 }
 
 pub fn exit_process(args: &SyscallArgs, context: &mut ProcessContext) {
     // FIXME: exit process with retcode
+    exit(args.arg0 as isize, context)
 }
 
 pub fn list_process() {

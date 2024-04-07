@@ -37,7 +37,7 @@ pub struct App<'a> {
 
 pub type AppList = ArrayVec<App<'static>, 16>;
 
-pub type AppListRef<'a> = &'a AppList;
+pub type AppListRef = Option<&'static AppList>;
 
 /// This structure represents the information that the bootloader passes to the kernel.
 pub struct BootInfo {

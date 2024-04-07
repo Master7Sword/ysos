@@ -10,7 +10,10 @@ pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 // lab3新增
 pub const CLOCK_INTERRUPT_INDX: u16 = 2;
 
-pub const IST_SIZES: [usize; 4] = [0x1000, 0x1000, 0x1000, 0x1000]; // IST_SIZES[3]的值还待定
+// lab4新增
+pub const SYSCALL_INDX: u16 = 3;
+
+pub const IST_SIZES: [usize; 5] = [0x1000, 0x1000, 0x1000, 0x1000, 0x1000]; 
 
 lazy_static! {
     static ref TSS: TaskStateSegment = {
@@ -69,7 +72,21 @@ lazy_static! {
             let stack_start = VirtAddr::from_ptr(unsafe{STACK.as_ptr()});
             let stack_end = stack_start + STACK_SIZE as u64;
             info!(
-                "Double Fault Stack  : 0x{:016x}-0x{:016x}",
+                "Interrupt Handle Stack  : 0x{:016x}-0x{:016x}",
+                stack_start.as_u64(),
+                stack_end.as_u64(),
+            );
+            stack_end
+        };
+
+        // lab4新增 系统调用栈
+        tss.interrupt_stack_table[SYSCALL_INDX as usize] = {
+            const STACK_SIZE:usize = IST_SIZES[4];
+            static mut STACK: [u8;STACK_SIZE] = [0;STACK_SIZE];
+            let stack_start = VirtAddr::from_ptr(unsafe{STACK.as_ptr()});
+            let stack_end = stack_start + STACK_SIZE as u64;
+            info!(
+                "Syscall Stack  : 0x{:016x}-0x{:016x}",
                 stack_start.as_u64(),
                 stack_end.as_u64(),
             );
@@ -82,17 +99,23 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, KernelSelectors) = {
+    static ref GDT: (GlobalDescriptorTable, KernelSelectors,UserSelectors) = {
         let mut gdt = GlobalDescriptorTable::new();
         let code_selector = gdt.append(Descriptor::kernel_code_segment());
         let data_selector = gdt.append(Descriptor::kernel_data_segment());
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+        let user_data_selector = gdt.append(Descriptor::user_data_segment());
         (
             gdt,
             KernelSelectors {
                 code_selector,
                 data_selector,
                 tss_selector,
+            },
+            UserSelectors {
+                user_code_selector,
+                user_data_selector,
             },
         )
     };
@@ -105,11 +128,39 @@ pub struct KernelSelectors {
     tss_selector: SegmentSelector,
 }
 
+
+// lab4新增
+// lazy_static! {
+//     static ref GDT: (GlobalDescriptorTable,UserSelectors) = {
+//         let mut gdt = GlobalDescriptorTable::new();
+//         // ...
+//         let user_code_selector = gdt.append(Descriptor::user_code_segment());
+//         let user_data_selector = gdt.append(Descriptor::user_data_segment());
+//         // ...
+//         (
+//             gdt,
+//             UserSelectors {
+//                 user_code_selector,
+//                 user_data_selector,
+//             },
+//         )
+//     };
+// }
+
+pub struct UserSelectors {
+    pub user_code_selector: SegmentSelector,
+    pub user_data_selector: SegmentSelector,
+}
+
+pub fn get_user_selector() -> &'static UserSelectors{
+    &GDT.2
+}
+
+
 pub fn init() {
     use x86_64::instructions::segmentation::{CS, DS, ES, FS, GS, SS};
     use x86_64::instructions::tables::load_tss;
     use x86_64::PrivilegeLevel;
-
     GDT.0.load();
     unsafe {
         CS::set_reg(GDT.1.code_selector);
@@ -120,7 +171,6 @@ pub fn init() {
         GS::set_reg(SegmentSelector::new(0, PrivilegeLevel::Ring0));
         load_tss(GDT.1.tss_selector);
     }
-
     let mut size = 0;
 
     for &s in IST_SIZES.iter() {
@@ -136,3 +186,4 @@ pub fn init() {
 pub fn get_selector() -> &'static KernelSelectors {
     &GDT.1
 }
+

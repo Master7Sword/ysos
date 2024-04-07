@@ -51,6 +51,16 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
         set_entry(elf.header.pt2.entry_point() as usize);
     }
 
+    // lab4 新增
+    let apps = if config.load_apps {
+        info!("Loading apps...");
+        Some(load_apps(system_table.boot_services()))
+    } else {
+        info!("Skip loading apps");
+        None
+    };
+    
+
     // 3. Load MemoryMap
     let max_mmap_size = system_table.boot_services().memory_map_size();
     let mmap_storage = Box::leak(
@@ -82,23 +92,15 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
 
     // FIXME: load and map the kernel elf file
     elf::load_elf(&elf, config.physical_memory_offset,&mut page_table,&mut frame_allocator);
-    
+
     // FIXME: map kernel stack
     elf::map_range(
         config.kernel_stack_address,
         config.kernel_stack_size,
         &mut page_table,
         &mut frame_allocator,
+        false,
     );
-
-    // lab4 新增
-    let apps = if config.load_apps {
-        info!("Loading apps...");
-        Some(load_apps(system_table.boot_services()))
-    } else {
-        info!("Skip loading apps");
-        None
-    };
 
     // FIXME: recover write protect (Cr0)
     unsafe{
@@ -113,7 +115,6 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     let (runtime, mmap) = system_table.exit_boot_services(MemoryType::LOADER_DATA);
     // NOTE: alloc & log are no longer available
 
-    
 
     // construct BootInfo
     let bootinfo = BootInfo {

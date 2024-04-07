@@ -1,4 +1,7 @@
 use alloc::string::String;
+use alloc::collections::BTreeMap;
+use spin::mutex::Mutex;
+use crate::input;
 
 #[derive(Debug, Clone)]
 pub enum StdIO {
@@ -66,7 +69,19 @@ impl Resource {
             Resource::Console(stdio) => match stdio {
                 StdIO::Stdin => {
                     // FIXME: just read from kernel input buffer
-                    Some(0)
+                    if buf.is_empty(){
+                        return Some(0)
+                    }
+                    else{
+                        if let mut key = input::get_line(){
+                            let bytes = key.as_bytes();
+                            buf[..bytes.len()].copy_from_slice(bytes);
+                        }
+                        else{
+                            return Some(0)
+                        }
+                    }
+                    Some(buf.len())
                 }
                 _ => None,
             },

@@ -4,6 +4,7 @@ use x86_64::structures::paging::{
     page::{PageRange, PageRangeInclusive},
     Page,
 };
+use crate::resource::ResourceSet;
 
 use super::*;
 
@@ -16,6 +17,8 @@ pub struct ProcessData {
     pub(super) stack_segment: Option<PageRange>,
 
     pub(super) stack_memory_usage: usize,
+
+    pub(super) resources: Arc<RwLock<ResourceSet>>,
 }
 
 impl Default for ProcessData {
@@ -24,6 +27,7 @@ impl Default for ProcessData {
             env: Arc::new(RwLock::new(BTreeMap::new())),
             stack_segment: None,
             stack_memory_usage: 0,
+            resources: Arc::new(RwLock::new(ResourceSet::default())),
         }
     }
 }
@@ -57,5 +61,14 @@ impl ProcessData {
         } else {
             false
         }
+    }
+    
+    // lab4新增
+    pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
+        self.resources.read().read(fd, buf)
+    }
+    
+    pub fn write(&self, fd: u8, buf: &[u8]) -> isize {
+        self.resources.read().write(fd, buf)
     }
 }

@@ -1,5 +1,6 @@
 use self::processor::{set_pid, Processor};
 use arrayvec::ArrayVec;
+use elf::load_elf;
 
 use super::*;
 use crate::memory::{
@@ -11,6 +12,7 @@ use alloc::{collections::*, format};
 use boot::AppListRef;
 use spin::{Mutex, RwLock};
 use alloc::sync::Arc;
+use alloc::sync::Weak;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
@@ -26,7 +28,7 @@ pub fn init(init: Arc<Process>, apps:AppListRef) {
     set_pid(init.pid());
 
 
-    PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
+    PROCESS_MANAGER.call_once(|| ProcessManager::new(init,apps));
 }
 
 pub fn get_process_manager() -> &'static ProcessManager {
@@ -36,19 +38,19 @@ pub fn get_process_manager() -> &'static ProcessManager {
 }
 
 // lab4新增，辅助app_list初始化
-lazy_static! {
-    static ref GLOBAL_APP_LIST: boot::AppList = ArrayVec::new();
-}
+// lazy_static! {
+//     static ref GLOBAL_APP_LIST: boot::AppList = ArrayVec::new();
+// }
 
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,
     ready_queue: Mutex<VecDeque<ProcessId>>,
-    app_list: boot::AppListRef<'static>,
+    app_list: boot::AppListRef,
 }
 
 // lab3有个莫名其妙的处理函数尚未实现，等到wait_pid要用的时候再写
 impl ProcessManager {
-    pub fn new(init: Arc<Process>) -> Self {
+    pub fn new(init: Arc<Process>, app_list: boot::AppListRef) -> Self {
         let mut processes = BTreeMap::new();
         let ready_queue = VecDeque::new();
         let pid = init.pid();
@@ -59,8 +61,7 @@ impl ProcessManager {
         Self {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
-            // 这里初始化还尚未确定是否正确
-            app_list: &GLOBAL_APP_LIST,
+            app_list,
         }
     }
 
@@ -126,41 +127,41 @@ impl ProcessManager {
         pid
     }
 
-    // 创建内核进程
-    pub fn spawn_kernel_thread(
-        &self,
-        entry: VirtAddr,
-        name: String,
-        proc_data: Option<ProcessData>,
-    ) -> ProcessId {
-        let kproc = self.get_proc(&KERNEL_PID).unwrap();
-        let page_table = kproc.read().clone_page_table();
-        let proc = Process::new(name, Some(Arc::downgrade(&kproc)), page_table, proc_data);
+    // lab3 创建内核进程，lab4中注释
+    // pub fn spawn_kernel_thread(
+    //     &self,
+    //     entry: VirtAddr,
+    //     name: String,
+    //     proc_data: Option<ProcessData>,
+    // ) -> ProcessId {
+    //     let kproc = self.get_proc(&KERNEL_PID).unwrap();
+    //     let page_table = kproc.read().clone_page_table();
+    //     let proc = Process::new(name, Some(Arc::downgrade(&kproc)), page_table, proc_data);
 
-        // alloc stack for the new process base on pid
-        let stack_top = proc.alloc_init_stack();
-        //info!("alloc_init_stack success!");
+    //     // alloc stack for the new process base on pid
+    //     let stack_top = proc.alloc_init_stack();
+    //     //info!("alloc_init_stack success!");
 
-        // FIXME: set the stack frame
-        let mut inner = proc.write();
-        inner.pause();
-        inner.init_stack_frame(entry,stack_top);
+    //     // FIXME: set the stack frame
+    //     let mut inner = proc.write();
+    //     inner.pause();
+    //     inner.init_stack_frame(entry,stack_top);
         
-        //info!("init_stack_frame success!");
+    //     //info!("init_stack_frame success!");
 
-        // FIXME: add to process map
-        let new_pid = proc.pid();
-        info!("Spawn process: {}#{}", inner.name(), new_pid);
-        drop(inner);
-        self.add_proc(new_pid, proc.clone());
+    //     // FIXME: add to process map
+    //     let new_pid = proc.pid();
+    //     info!("Spawn process: {}#{}", inner.name(), new_pid);
+    //     drop(inner);
+    //     self.add_proc(new_pid, proc.clone());
 
-        // FIXME: push to ready queue
-        self.push_ready(new_pid);
-        //info!("push_ready success!");
+    //     // FIXME: push to ready queue
+    //     self.push_ready(new_pid);
+    //     //info!("push_ready success!");
 
-        // FIXME: return new process pid
-        new_pid
-    }
+    //     // FIXME: return new process pid
+    //     new_pid
+    // }
 
     pub fn kill_current(&self, ret: isize) {
         self.kill(processor::get_pid(), ret);
@@ -173,7 +174,7 @@ impl ProcessManager {
         let min_addr = STACK_MAX - (pid)*STACK_MAX_SIZE;
         let max_addr = min_addr + STACK_MAX_SIZE;
         let addr_u64 = addr.as_u64();
-        println!("addr:{}, min_addr:{}, max_addr{}",addr_u64,min_addr,max_addr);
+        println!("addr:{:X}, min_addr:{:X}, max_addr:{:X}",addr_u64,min_addr,max_addr);
         if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) && addr_u64 >= min_addr && addr_u64 <= max_addr{
             info!("handling...");
             process.write().alloc_new_stack_page(addr);
@@ -220,12 +221,50 @@ impl ProcessManager {
         print!("{}", output);
     }
 
-    pub fn app_list(&self) -> Option<boot::AppListRef<'static>> {
-        if self.app_list.is_empty() {
-            None
-        } else {
-            Some(self.app_list)
-        }
+    pub fn app_list(&self) -> boot::AppListRef {
+        self.app_list
+    }
+
+    // lab4 新增
+
+    pub fn spawn(
+        &self,
+        elf: &ElfFile,
+        name: String,
+        parent: Option<Weak<Process>>,
+        proc_data: Option<ProcessData>,
+    ) -> ProcessId {
+        let kproc = self.get_proc(&KERNEL_PID).unwrap();
+        let page_table = kproc.read().clone_page_table();
+        let proc = Process::new(name, parent, page_table, proc_data);
+        let pid = proc.pid();
+    
+        let mut inner = proc.write();
+        // FIXME: load elf to process pagetable
+        let stack_bot = inner.load_elf(elf, pid.0 as u64);
+        let stack_top = stack_bot + STACK_DEF_SIZE - 8;
+
+        // FIXME: alloc new stack for process
+
+        let entry_addr = elf.header.pt2.entry_point();
+        inner.init_stack_frame(VirtAddr::new(entry_addr), VirtAddr::new(stack_top)); // 栈顶超出范围了
+        
+        // FIXME: mark process as ready
+        inner.pause();
+
+        drop(inner);
+    
+        trace!("New {:#?}", &proc);
+    
+        // FIXME: something like kernel thread
+        self.add_proc(pid, proc);
+        self.push_ready(pid);
+
+        pid
+    }
+    
+    pub fn kill_self(&self, ret: isize) {
+        self.kill(processor::current().get_pid().unwrap(), ret);
     }
     
 }

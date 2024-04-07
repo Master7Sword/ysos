@@ -1,11 +1,13 @@
 pub mod address;
 pub mod allocator;
 mod frames;
+pub mod user;
 
 pub mod gdt;
 
 pub use address::*;
 pub use frames::*;
+
 
 use crate::humanized_size;
 

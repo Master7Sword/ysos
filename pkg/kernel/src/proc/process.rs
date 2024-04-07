@@ -96,17 +96,22 @@ impl Process {
         let count = STACK_DEF_PAGE;
         let mut page_table = self.read().page_table.as_ref().unwrap().mapper();
         let frame_allocator = &mut *get_frame_alloc_for_sure();
-        //println!("pid = {}, addr = {}, count = {}",pid,addr,count);
+        println!("pid = {}, addr = {}, count = {}",pid,addr,count);
         let _ = elf::map_range(
             addr,
             count,
             &mut page_table,
             frame_allocator,
+            true,
         );
         
         self.write().set_stack(VirtAddr::new(addr), count);
 
         VirtAddr::new(STACK_INIT_TOP - (pid-1)*STACK_MAX_SIZE) // pid从2开始算
+    }
+
+    pub fn get_data_mut(&self) -> RwLockWriteGuard<ProcessInner> {
+        self.inner.write()
     }
 }
 
@@ -193,12 +198,27 @@ impl ProcessInner {
 
         let pages = old_stack.start - new_start_page;
         let page_table = &mut self.page_table.as_mut().unwrap().mapper();
-        //info!("before map_range");
-        elf::map_range(addr.as_u64(), pages, page_table, alloc);
-        //info!("after map_range");
 
+        let user_access = processor::current().get_pid().unwrap() != KERNEL_PID;
+
+        elf::map_range(addr.as_u64(), pages, page_table, alloc,user_access);
     }
     
+    pub fn load_elf(&mut self, elf: &ElfFile, pid: u64) -> u64{
+        let mut page_table = self.page_table.as_ref().unwrap().mapper();
+        let mut frame_allocator = &mut *get_frame_alloc_for_sure();
+
+        elf::load_elf(elf, *PHYSICAL_OFFSET.get().unwrap(), &mut page_table, frame_allocator);
+
+        let stack_bot:u64= STACK_INIT_BOT -(pid - 1)* STACK_MAX_SIZE;
+        let stack_segment = elf::map_range(stack_bot, STACK_DEF_PAGE, &mut page_table, frame_allocator, true).unwrap();
+
+        let proc_data = self.proc_data.as_mut().unwrap();
+        proc_data.stack_segment = Some(stack_segment);
+
+        stack_bot
+    }
+
 }
 
 impl core::ops::Deref for Process {

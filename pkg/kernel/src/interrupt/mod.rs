@@ -3,6 +3,7 @@ mod consts;
 pub mod clock;
 mod serial;
 mod exceptions;
+mod syscall;
 
 use apic::*;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -15,6 +16,7 @@ lazy_static! {
             exceptions::register_idt(&mut idt);
             clock::reg_idt(&mut idt);
             serial::register_idt(&mut idt);
+            syscall::register_idt(&mut idt);
             //info!("IDT loaded!");
         }
         idt
