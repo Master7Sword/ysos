@@ -208,13 +208,14 @@ impl ProcessInner {
         let mut page_table = self.page_table.as_ref().unwrap().mapper();
         let mut frame_allocator = &mut *get_frame_alloc_for_sure();
 
-        elf::load_elf(elf, *PHYSICAL_OFFSET.get().unwrap(), &mut page_table, frame_allocator);
+        let code_segments = elf::load_elf(elf, *PHYSICAL_OFFSET.get().unwrap(), &mut page_table, frame_allocator,true);
 
         let stack_bot:u64= STACK_INIT_BOT -(pid - 1)* STACK_MAX_SIZE;
         let stack_segment = elf::map_range(stack_bot, STACK_DEF_PAGE, &mut page_table, frame_allocator, true).unwrap();
 
         let proc_data = self.proc_data.as_mut().unwrap();
         proc_data.stack_segment = Some(stack_segment);
+        proc_data.code_segments = Some(code_segments);
 
         stack_bot
     }

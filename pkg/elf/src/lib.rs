@@ -2,13 +2,15 @@
 
 #[macro_use]
 extern crate log;
+extern crate alloc;
 
 use core::ptr::{copy_nonoverlapping, write_bytes};
 
-use x86_64::structures::paging::page::PageRange;
+use x86_64::structures::paging::page::{PageRange,PageRangeInclusive};
 use x86_64::structures::paging::{mapper::*, *};
 use x86_64::{align_up, PhysAddr, VirtAddr};
 use xmas_elf::{program, ElfFile};
+use alloc::vec::Vec;
 
 /// Map physical memory
 ///
@@ -92,26 +94,36 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) -> Result<(), MapToError<Size4KiB>> {
-    let file_buf = elf.input.as_ptr();
+    user_access: bool,
+) -> Vec<PageRangeInclusive> {
+    let mut page_ranges = Vec::new();
+    let file_buf = elf.input.as_ptr(); // 获取ELF文件内存地址
 
     info!("Loading ELF file... @ {:#x}", file_buf as u64);
 
     for segment in elf.program_iter() {
         if segment.get_type().unwrap() != program::Type::Load {
             continue;
-        }
+        } // 遍历ELF中的所有程序段，如果是LOAD类型则加载到内存中
 
-        load_segment(
+        let page_range = match load_segment(
             file_buf,
             physical_offset,
             &segment,
             page_table,
             frame_allocator,
-        )?
+            user_access,
+        ) {
+            Ok(page_range) => page_range,
+            Err(error) => {
+                error!("Failed to load segment: {:?}",error);
+                continue;
+            }
+        };
+        page_ranges.push(page_range);
     }
 
-    Ok(())
+    page_ranges
 }
 
 /// Load & Map ELF segment
@@ -123,7 +135,8 @@ fn load_segment(
     segment: &program::ProgramHeader,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) -> Result<(), MapToError<Size4KiB>> {
+    user_access: bool,
+) -> Result<PageRangeInclusive, MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
     let mem_size = segment.mem_size();
@@ -134,6 +147,10 @@ fn load_segment(
     let mut page_table_flags = PageTableFlags::PRESENT;
 
     // FIXME: handle page table flags with segment flags
+
+    if user_access{
+        page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
+    }
     
     if segment.flags().is_read(){
         page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
@@ -221,5 +238,5 @@ fn load_segment(
         }
     }
 
-    Ok(())
+    Ok(pages)
 }

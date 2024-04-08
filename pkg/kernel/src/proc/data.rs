@@ -16,6 +16,8 @@ pub struct ProcessData {
     // process specific data
     pub(super) stack_segment: Option<PageRange>,
 
+    pub(super) code_segments: Option<Vec<PageRangeInclusive>>,
+
     pub(super) stack_memory_usage: usize,
 
     pub(super) resources: Arc<RwLock<ResourceSet>>,
@@ -26,6 +28,7 @@ impl Default for ProcessData {
         Self {
             env: Arc::new(RwLock::new(BTreeMap::new())),
             stack_segment: None,
+            code_segments:None,
             stack_memory_usage: 0,
             resources: Arc::new(RwLock::new(ResourceSet::default())),
         }

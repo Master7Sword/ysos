@@ -128,25 +128,6 @@ pub struct KernelSelectors {
     tss_selector: SegmentSelector,
 }
 
-
-// lab4新增
-// lazy_static! {
-//     static ref GDT: (GlobalDescriptorTable,UserSelectors) = {
-//         let mut gdt = GlobalDescriptorTable::new();
-//         // ...
-//         let user_code_selector = gdt.append(Descriptor::user_code_segment());
-//         let user_data_selector = gdt.append(Descriptor::user_data_segment());
-//         // ...
-//         (
-//             gdt,
-//             UserSelectors {
-//                 user_code_selector,
-//                 user_data_selector,
-//             },
-//         )
-//     };
-// }
-
 pub struct UserSelectors {
     pub user_code_selector: SegmentSelector,
     pub user_data_selector: SegmentSelector,

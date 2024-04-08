@@ -55,14 +55,6 @@ impl ProcessContext {
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }
 
-    // pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
-    //     // ...
-    //     let selector = get_user_selector(); // FIXME: implement this function
-
-    //     self.value.stack_frame.code_segment = selector.user_code_selector;
-    //     self.value.stack_frame.stack_segment = selector.user_data_selector;
-    //     // ...
-    // }
 }
 
 impl Default for ProcessContextValue {

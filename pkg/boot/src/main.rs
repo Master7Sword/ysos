@@ -91,7 +91,7 @@ fn efi_main(image: uefi::Handle, mut system_table: SystemTable<Boot>) -> Status 
     elf::map_physical_memory(config.physical_memory_offset, max_phys_addr,&mut page_table,&mut frame_allocator);
 
     // FIXME: load and map the kernel elf file
-    elf::load_elf(&elf, config.physical_memory_offset,&mut page_table,&mut frame_allocator);
+    elf::load_elf(&elf, config.physical_memory_offset,&mut page_table,&mut frame_allocator,false);
 
     // FIXME: map kernel stack
     elf::map_range(

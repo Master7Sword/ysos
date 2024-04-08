@@ -1,3 +1,4 @@
+use crate::memory::gdt::SYSCALL_INDX;
 use crate::{memory::gdt, proc::*};
 use alloc::format;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -17,7 +18,10 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // FIXME: register syscall handler to IDT
     //        - standalone syscall stack
     //        - ring 3
-    idt[Interrupts::Syscall as u8].set_handler_fn(syscall_handler);
+    idt[Interrupts::Syscall as u8].set_handler_fn(syscall_handler)
+                                  .set_stack_index(SYSCALL_INDX)
+                                  .set_privilege_level(x86_64::PrivilegeLevel::Ring3);
+    
 }
 
 
