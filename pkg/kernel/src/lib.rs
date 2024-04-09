@@ -33,6 +33,8 @@ pub mod proc;
 pub use alloc::format;
 use boot::BootInfo;
 
+use crate::memory::user;
+
 pub fn init(boot_info: &'static BootInfo) {
     serial::init(); // init serial output
     logger::init(); // init logger system
@@ -42,6 +44,7 @@ pub fn init(boot_info: &'static BootInfo) {
     interrupt::init(); // init interrupts
     memory::init(boot_info); // init memory manager
     proc::init(boot_info);
+    user::init();
     x86_64::instructions::interrupts::enable(); 
     info!("Interrupts Enabled.");
 

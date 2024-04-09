@@ -42,7 +42,7 @@ impl ProcessContext {
         context.as_mut().as_mut_ptr().write(self.value);
     }
 
-    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+    pub fn init_user_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.value.stack_frame.stack_pointer = stack_top;
         self.value.stack_frame.instruction_pointer = entry;
         self.value.stack_frame.cpu_flags =
@@ -54,6 +54,20 @@ impl ProcessContext {
 
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }
+
+    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+        self.value.stack_frame.stack_pointer = stack_top;
+        self.value.stack_frame.instruction_pointer = entry;
+        self.value.stack_frame.cpu_flags =
+            RFlags::IOPL_HIGH | RFlags::IOPL_LOW | RFlags::INTERRUPT_FLAG;
+
+        let selector = get_selector();
+        self.value.stack_frame.code_segment = selector.code_selector;
+        self.value.stack_frame.stack_segment = selector.data_selector;
+
+        trace!("Init stack frame: {:#?}", &self.stack_frame);
+    }
+
 
 }
 

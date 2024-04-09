@@ -24,7 +24,6 @@ pub use syscall::*;
 
 #[macro_export]
 macro_rules! print {
-    //($($arg:tt)*) => ($crate::_print(format_args!($($arg)*)));
     ($($arg:tt)*) => ($crate::_print(format_args!($($arg)*)));
 }
 
@@ -53,4 +52,8 @@ pub fn _print(args: Arguments) {
 #[doc(hidden)]
 pub fn _err(args: Arguments) {
     stderr().write(format!("{}", args).as_str());
+}
+
+pub fn exit(){
+    sys_exit(114514);
 }

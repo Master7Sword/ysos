@@ -41,6 +41,7 @@ impl ResourceSet {
     }
 
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
+        info!("connecting to serial");
         if let Some(count) = self.handles.get(&fd).and_then(|h| h.lock().read(buf)) {
             count as isize
         } else {
@@ -69,15 +70,20 @@ impl Resource {
             Resource::Console(stdio) => match stdio {
                 StdIO::Stdin => {
                     // FIXME: just read from kernel input buffer
+                    info!("enter Stdin");
                     if buf.is_empty(){
+                        info!("empty");
                         return Some(0)
                     }
                     else{
+                        info!("buf is not empty");
                         if let mut key = input::get_line(){
+                            info!("input::get_line");
                             let bytes = key.as_bytes();
                             buf[..bytes.len()].copy_from_slice(bytes);
                         }
                         else{
+                            info!("get_line failed");
                             return Some(0)
                         }
                     }

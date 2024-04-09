@@ -44,16 +44,21 @@ pub fn sys_write(args: &SyscallArgs) -> usize {
 }
 
 pub fn sys_read(args: &SyscallArgs) -> usize {
+    info!("sys_read starts");
     let mut buffer = unsafe{
         core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2)
     };
+    info!("get buffer");
     let fd = args.arg0 as u8;
 
     let pid = current().get_pid().unwrap();
+    info!("get pid:{}",pid);
     let proc = get_process_manager().get_proc(&pid).unwrap();
-    let proc_data = proc.get_data_mut();
-    let result = proc_data.read(fd, buffer);
-  
+    info!("get proc");
+    let mut proc_inner = proc.get_data_mut();
+    info!("get proc_inner");
+    let result = proc_inner.proc_data_read(fd, buffer);
+    info!("sys_read ends, result:{}",result);
     result as usize
 }
 

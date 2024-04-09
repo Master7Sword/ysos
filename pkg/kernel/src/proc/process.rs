@@ -191,6 +191,11 @@ impl ProcessInner {
         self.context.init_stack_frame(entry, stack_top);
     }
 
+    pub fn init_user_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+        self.context.init_user_stack_frame(entry, stack_top);
+    }
+
+
     pub fn alloc_new_stack_page(&mut self,addr: VirtAddr){
         let alloc = &mut *get_frame_alloc_for_sure();
         let new_start_page = Page::<Size4KiB>::containing_address(addr);
@@ -218,6 +223,11 @@ impl ProcessInner {
         proc_data.code_segments = Some(code_segments);
 
         stack_bot
+    }
+
+    pub fn proc_data_read(&mut self, fd:u8, buf: &mut [u8]) -> isize{
+        info!("proc_data_read");
+        self.proc_data.as_ref().expect("invalid proc_data").read(fd,buf)
     }
 
 }

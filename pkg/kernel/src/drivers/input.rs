@@ -55,8 +55,9 @@ pub fn try_pop_key() -> Option<Key> {
 pub fn get_line() -> String {
     let mut line = String::with_capacity(128);
     let mut utf8_buf: Vec<u8> = Vec::new(); // 临时存储UTF-8序列
-
+    info!("into get_line");
     loop {
+        //info!("INPUT_BUF len:{}",INPUT_BUF.len());
         if let Some(byte) = try_pop_key() {
             match byte {
                 0xD => { 

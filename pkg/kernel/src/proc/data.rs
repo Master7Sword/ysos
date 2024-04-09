@@ -68,6 +68,7 @@ impl ProcessData {
     
     // lab4新增
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
+        info!("reading...");
         self.resources.read().read(fd, buf)
     }
     

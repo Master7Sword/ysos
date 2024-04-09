@@ -247,7 +247,7 @@ impl ProcessManager {
         // FIXME: alloc new stack for process
 
         let entry_addr = elf.header.pt2.entry_point();
-        inner.init_stack_frame(VirtAddr::new(entry_addr), VirtAddr::new(stack_top)); // 栈顶超出范围了
+        inner.init_user_stack_frame(VirtAddr::new(entry_addr), VirtAddr::new(stack_top));
         
         // FIXME: mark process as ready
         inner.pause();
