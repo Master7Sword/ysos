@@ -31,6 +31,7 @@ pub unsafe fn reg_idt(idt: &mut InterruptDescriptorTable) {
 
 pub extern "C" fn teapot(mut context: ProcessContext) {
     crate::proc::switch(&mut context);
+    //info!("clock");
     super::ack();
 }
 

@@ -7,6 +7,8 @@ mod regs;
 pub mod func;
 pub mod logger;
 pub mod resource;
+pub mod uefi;
+pub mod clock;
 
 pub use macros::*;
 pub use regs::*;

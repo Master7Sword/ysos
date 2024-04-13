@@ -68,11 +68,36 @@ impl ProcessData {
     
     // lab4新增
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
-        info!("reading...");
         self.resources.read().read(fd, buf)
     }
     
     pub fn write(&self, fd: u8, buf: &[u8]) -> isize {
         self.resources.read().write(fd, buf)
+    }
+
+    pub fn stack_memory_usage(&self) -> usize {
+        if let Some(ref range) = self.stack_segment {
+            let start_addr = range.start.start_address().as_u64();
+            let end_addr = range.end.start_address().as_u64();
+            (end_addr - start_addr) as usize
+        } else {
+            0
+        }
+    }
+
+    pub fn code_memory_usage(&self) -> usize {
+        if let Some(ref segments) = self.code_segments {
+            segments.iter().map(|range| {
+                let start_addr = range.start.start_address().as_u64();
+                let end_addr = range.end.start_address().as_u64();
+                (end_addr - start_addr) as usize
+            }).sum()
+        } else {
+            0
+        }
+    }
+
+    pub fn total_memory_usage(&self) -> usize {
+        self.stack_memory_usage() + self.code_memory_usage()
     }
 }

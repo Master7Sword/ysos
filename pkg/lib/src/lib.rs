@@ -15,7 +15,7 @@ pub mod allocator;
 pub extern crate alloc;
 
 mod syscall;
-
+pub mod utils;
 use core::fmt::*;
 
 pub use alloc::*;
@@ -52,8 +52,4 @@ pub fn _print(args: Arguments) {
 #[doc(hidden)]
 pub fn _err(args: Arguments) {
     stderr().write(format!("{}", args).as_str());
-}
-
-pub fn exit(){
-    sys_exit(114514);
 }

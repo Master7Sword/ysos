@@ -22,3 +22,4 @@ linked_list_allocator = "0.10"
 volatile = "0.5"
 arrayvec = { version = "0.7", default-features = false }
 syscall_def = { package = "ysos_syscall", path = "../syscall" }
+chrono = {version = "0.4", default-features = false }

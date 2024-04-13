@@ -100,11 +100,6 @@ pub fn load_apps(bs: &BootServices) -> AppList {
     let cstr_path = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap();
 
     /* FIXME: get handle for \APP\ dir */
-    // let mut handle = root
-    //                             .open(&cstr_path,FileMode::Read,FileAttribute::empty())
-    //                             .expect("Failed to open \\APP\\ directory")
-    //                             .into_directory()
-    //                             .expect("Failed to convert into directory");
     let mut handle = root
                     .open(&cstr_path,FileMode::Read,FileAttribute::empty())
                     .expect("Failed to open APP directory");
@@ -124,11 +119,9 @@ pub fn load_apps(bs: &BootServices) -> AppList {
 
         match info {
             Some(entry) => {
-                /* FIXME: get handle for app binary file */
-                
+                /* FIXME: get handle for app binary file */        
                 let mut file = dir.open(entry.file_name(), FileMode::Read, FileAttribute::empty())
                                                                 .expect("Failed to open file");
-
                 if file.is_directory().unwrap_or(true) {
                     continue;
                 }

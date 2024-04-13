@@ -7,7 +7,7 @@ extern crate lib;
 
 fn main() -> isize {
     println!("Hello, world!!!");
-    exit();
+    //sys_exit(233);
     233
 }
 

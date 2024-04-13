@@ -204,7 +204,7 @@ impl ProcessManager {
     }
 
     pub fn print_process_list(&self) {
-        let mut output = String::from("  PID | PPID | Process Name |  Ticks  | Status\n");
+        let mut output = String::from("  PID | PPID | Process Name   |  Ticks  | Memory Usage | Status \n");
 
         for (_, p) in self.processes.read().iter() {
             if p.read().status() != ProgramStatus::Dead {
@@ -266,5 +266,4 @@ impl ProcessManager {
     pub fn kill_self(&self, ret: isize) {
         self.kill(processor::current().get_pid().unwrap(), ret);
     }
-    
 }

@@ -52,17 +52,11 @@ pub fn dispatcher(context: &mut ProcessContext) {
     match args.syscall {
         // fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
         /* FIXME: read from fd & return length */ 
-        Syscall::Read => {
-            //info!("read");
-            context.set_rax(sys_read(&args))
-        }, // 返回值通过rax寄存器传递
+        Syscall::Read => {context.set_rax(sys_read(&args))}, // 返回值通过rax寄存器传递
 
         // fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
         /* FIXME: write to fd & return length */
-        Syscall::Write => {
-            //info!("write");
-            context.set_rax(sys_write(&args))
-        },
+        Syscall::Write => {context.set_rax(sys_write(&args))},
 
         // None -> pid: u16
         /* FIXME: get current pid */
@@ -74,10 +68,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
         // ret: arg0 as isize
         /* FIXME: exit process with retcode */
-        Syscall::Exit => {
-            //info!("exit");
-            exit_process(&args, context)
-        },
+        Syscall::Exit => {exit_process(&args, context)},
 
         // pid: arg0 as u16 -> status: isize
         /* FIXME: check if the process is running or get retcode */
@@ -89,7 +80,10 @@ pub fn dispatcher(context: &mut ProcessContext) {
         
         // None
         /* FIXME: list avaliable apps */
-        Syscall::ListApp => { },
+        Syscall::ListApp => {list_app()},
+
+        // 加分项 None -> u64
+        Syscall::Time => {context.set_rax(sys_clock() as usize)},
 
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented

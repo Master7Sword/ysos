@@ -80,6 +80,7 @@ pub fn init(boot_info: &'static boot::BootInfo) {
 pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // FIXME: switch to the next process
+        //info!("without interrupts: switched to next process");
         get_process_manager().save_current(context);
         get_process_manager().switch_next(context);
     });
@@ -176,12 +177,16 @@ pub fn elf_spawn(name: String, elf: &ElfFile) -> Option<ProcessId> {
 //     x86_64::instructions::interrupts::without_interrupts(|| get_process_manager().write(fd, buf))
 // }
 
-pub fn exit(ret: isize, context: &mut ProcessContext) {
+pub fn exit(id: isize, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
         // FIXME: implement this for ProcessManager
-        manager.kill_self(ret);
-        manager.switch_next(context);
+        if id == 0{
+            manager.kill_self(id);
+            manager.switch_next(context);
+        }else{
+            manager.kill(ProcessId(id as u16), 114514);
+        }
     })
 }
 

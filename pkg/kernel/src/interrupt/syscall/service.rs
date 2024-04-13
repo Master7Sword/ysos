@@ -2,6 +2,10 @@ use core::alloc::Layout;
 
 use crate::proc::*;
 use crate::utils::*;
+use boot::RuntimeServices;
+use boot::BootInfo;
+use boot::Time;
+use spin::Mutex;
 
 use self::processor::current;
 
@@ -44,31 +48,26 @@ pub fn sys_write(args: &SyscallArgs) -> usize {
 }
 
 pub fn sys_read(args: &SyscallArgs) -> usize {
-    info!("sys_read starts");
     let mut buffer = unsafe{
         core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2)
     };
-    info!("get buffer");
     let fd = args.arg0 as u8;
 
     let pid = current().get_pid().unwrap();
-    info!("get pid:{}",pid);
     let proc = get_process_manager().get_proc(&pid).unwrap();
-    info!("get proc");
     let mut proc_inner = proc.get_data_mut();
-    info!("get proc_inner");
     let result = proc_inner.proc_data_read(fd, buffer);
-    info!("sys_read ends, result:{}",result);
     result as usize
 }
 
 pub fn exit_process(args: &SyscallArgs, context: &mut ProcessContext) {
     // FIXME: exit process with retcode
-    exit(args.arg0 as isize, context)
+    exit(args.arg0 as isize, context);
 }
 
 pub fn list_process() {
     // FIXME: list all processes
+    get_process_manager().print_process_list();
 }
 
 pub fn sys_allocate(args: &SyscallArgs) -> usize {
@@ -101,5 +100,15 @@ pub fn sys_deallocate(args: &SyscallArgs) {
         crate::memory::user::USER_ALLOCATOR
             .lock()
             .deallocate(core::ptr::NonNull::new_unchecked(ptr), *layout);
+    }
+}
+
+// lab4 加分项  
+
+pub fn sys_clock() -> i64 {
+    if let Some(t) = clock::now() {
+        return t.and_utc().timestamp_nanos_opt().unwrap_or_default();
+    } else {
+        return -1;
     }
 }

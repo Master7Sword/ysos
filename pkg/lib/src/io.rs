@@ -1,3 +1,5 @@
+use core::panic::PanicInfo;
+
 use crate::*;
 use alloc::string::{String, ToString};
 use alloc::vec;
@@ -12,12 +14,10 @@ impl Stdin {
     }
 
     pub fn read_char_with_buf(&self,buf: &mut [u8]) -> Option<char>{
-        self::print!("11111111");
         if let Some(size) = sys_read(0, buf){
             if size > 0{
-                self::print!("2222222");
-                return Some(String::from_utf8_lossy(&buf[..size]).to_string().remove(0)); // remove(0)将字符串第一个字符删除并返回
-            } 
+                return Some(buf[0] as char)
+            }
         }
         None
     }
@@ -29,15 +29,15 @@ impl Stdin {
         // FIXME: read from input buffer
         //       - maybe char by char?
         // FIXME: handle backspace / enter...
-        let mut buf = [0;4];
+        let mut buf = [0; 4];
         loop{
-            if let Some(char) = self.read_char_with_buf(&mut buf[..4]){
+            if let Some(char) = self.read_char_with_buf(&mut buf){     
                 match char{
-                    '\n' =>{
-                        //self::print!("enter");
+                    '\0' => continue,
+                    '\x0D' =>{
                         break;
                     }
-                    '\x08' => { 
+                    '\x7F' => {  // 退格
                         line.pop();
                     }
                     _ => {

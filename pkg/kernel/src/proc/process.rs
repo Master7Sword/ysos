@@ -226,7 +226,6 @@ impl ProcessInner {
     }
 
     pub fn proc_data_read(&mut self, fd:u8, buf: &mut [u8]) -> isize{
-        info!("proc_data_read");
         self.proc_data.as_ref().expect("invalid proc_data").read(fd,buf)
     }
 
@@ -285,11 +284,12 @@ impl core::fmt::Display for Process {
         let inner = self.inner.read();
         write!(
             f,
-            " #{:-3} | #{:-3} | {:12} | {:7} | {:?}",
+            " #{:-3} | #{:-3} | {:14} | {:7} | {:12} | {:?}",
             self.pid.0,
             inner.parent().map(|p| p.pid.0).unwrap_or(0),
             inner.name,
             inner.ticks_passed,
+            inner.total_memory_usage(),
             inner.status
         )?;
         Ok(())
