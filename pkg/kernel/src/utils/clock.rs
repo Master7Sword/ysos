@@ -23,5 +23,3 @@ pub fn now() -> Option<NaiveDateTime> {
 
     Some(naive_date.and_time(naive_time))
 }
-
-
