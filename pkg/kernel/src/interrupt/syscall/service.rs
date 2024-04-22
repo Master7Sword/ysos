@@ -2,10 +2,7 @@ use core::alloc::Layout;
 
 use crate::proc::*;
 use crate::utils::*;
-use boot::RuntimeServices;
-use boot::BootInfo;
-use boot::Time;
-use spin::Mutex;
+
 
 use self::processor::current;
 
@@ -103,6 +100,14 @@ pub fn sys_deallocate(args: &SyscallArgs) {
     }
 }
 
+pub fn sys_wait_pid(args: &SyscallArgs) -> isize{
+    let pid = args.arg0;
+    let target_process = get_process_manager().get_proc(&ProcessId((pid) as u16)).unwrap();
+    let exit_code = target_process.read().exit_code().unwrap();
+    //info!("{}",exit_code);
+    exit_code
+}
+
 // lab4 加分项  
 
 pub fn sys_clock() -> i64 {
@@ -112,3 +117,16 @@ pub fn sys_clock() -> i64 {
         return -1;
     }
 }
+
+// lab5
+
+pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
+    match args.arg0 {
+        0 => context.set_rax(new_sem(args.arg1 as u32, args.arg2)),
+        1 => context.set_rax(remove_sem(args.arg1 as u32)),
+        2 => sem_signal(args.arg1 as u32, context),
+        3 => sem_wait(args.arg1 as u32, context),
+        _ => context.set_rax(usize::MAX),
+    }
+}
+

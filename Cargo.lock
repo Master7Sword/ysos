@@ -63,6 +63,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
 
 [[package]]
+name = "dinner"
+version = "0.1.0"
+dependencies = [
+ "yslib",
+]
+
+[[package]]
+name = "fork_test"
+version = "0.1.0"
+dependencies = [
+ "yslib",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -101,6 +115,13 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
+
+[[package]]
+name = "mq"
+version = "0.1.0"
+dependencies = [
+ "yslib",
+]
 
 [[package]]
 name = "num-traits"
@@ -388,6 +409,13 @@ dependencies = [
  "x86_64",
  "xmas-elf",
  "ysos_elf",
+]
+
+[[package]]
+name = "ysos_counter"
+version = "0.1.0"
+dependencies = [
+ "yslib",
 ]
 
 [[package]]

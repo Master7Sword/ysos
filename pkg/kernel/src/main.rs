@@ -21,5 +21,5 @@ pub fn spawn_init() -> proc::ProcessId {
 
     proc::list_app();
     //proc::spawn("hello").unwrap()
-    proc::spawn("sh").unwrap()
+    proc::spawn("dinner").unwrap()
 }

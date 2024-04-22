@@ -85,7 +85,7 @@ impl ProcessManager {
             .expect("No current process")
     }
 
-    pub fn save_current(&self, context: &ProcessContext) {
+    pub fn save_current(&self, context: &ProcessContext){
         // FIXME: update current process's tick count
         let process = self.current();
         let mut inner = process.write();
@@ -96,7 +96,7 @@ impl ProcessManager {
         
         // FIXME: push current process to ready queue if still alive
         if inner.status() != ProgramStatus::Dead{
-            self.push_ready(process.pid());
+            self.push_ready(process.pid()); 
         }
 
         drop(inner); // 释放
@@ -118,6 +118,7 @@ impl ProcessManager {
                 //println!("Before switching, current status:{:?}, next status:{:?}, current pid:{:?}, next pid:{:?},",self.current().read().status(),proc.read().status(),self.current().pid(),proc.pid());
                 proc.write().restore(context);
                 processor::set_pid(next);
+                //debug!("switch from pid:{} to pid:{}",pid,next);
                 pid = next;
                 //println!("After switching, current status:{:?}, next status:{:?}, current pid:{:?}, next pid:{:?},",self.current().read().status(),proc.read().status(),self.current().pid(),proc.pid());
 
@@ -264,6 +265,36 @@ impl ProcessManager {
     }
     
     pub fn kill_self(&self, ret: isize) {
+        // info!("going to kill pid:{}",processor::current().get_pid().unwrap());
         self.kill(processor::current().get_pid().unwrap(), ret);
+    }
+
+    // lab5新增
+
+    pub fn fork(&self) -> ProcessId{
+        // FIXME: get current process
+        let process = self.current();
+        // FIXME: fork to get child
+        let child = process.fork();
+        let child_pid = child.pid();
+        // FIXME: add child to process list
+        self.add_proc(child_pid, child);
+        self.push_ready(child_pid);
+        // FOR DBG: maybe print the process ready queue?
+
+        child_pid
+    }
+
+    pub fn block(&self, pid: ProcessId){
+        if let Some(proc) = self.get_proc(&pid) {
+            proc.write().block();
+        }
+    }
+
+    pub fn wakeup(&self, pid: ProcessId){
+        if let Some(proc) = self.get_proc(&pid) {
+            proc.write().pause();
+            self.push_ready(pid);
+        }
     }
 }

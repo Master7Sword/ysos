@@ -5,12 +5,13 @@ mod paging;
 mod pid;
 mod process;
 pub mod processor;
+pub mod sync;
 
 
 pub use manager::*;
 use process::*;
-use x86_64::registers::debug;
 use crate::memory::PAGE_SIZE;
+use crate::proc::sync::SemaphoreResult;
 
 use alloc::string::String;
 pub use context::ProcessContext;
@@ -163,7 +164,6 @@ pub fn elf_spawn(name: String, elf: &ElfFile) -> Option<ProcessId> {
         debug!("Spawned process: {}#{}", process_name, pid);
         pid
     });
-    debug!("elf_spawn success");
     Some(pid)
 }
 
@@ -182,11 +182,12 @@ pub fn exit(id: isize, context: &mut ProcessContext) {
         let manager = get_process_manager();
         // FIXME: implement this for ProcessManager
         if id == 0{
-            manager.kill_self(id);
+            manager.kill_self(64);
             manager.switch_next(context);
         }else{
-            manager.kill(ProcessId(id as u16), 114514);
+            manager.kill(ProcessId(id as u16), 64);
         }
+        //manager.kill_self(id);
     })
 }
 
@@ -195,5 +196,74 @@ pub fn still_alive(pid: ProcessId) -> bool {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // check if the process is still alive
         get_process_manager().get_proc(&pid).unwrap().read().status() != ProgramStatus::Dead
+    })
+}
+
+// lab5新增
+pub fn fork(context: &mut ProcessContext) -> u16 {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        // FIXME: save_current as parent
+        manager.save_current(context);
+        // FIXME: fork to get child
+        let child_pid: ProcessId = manager.fork();
+        // FIXME: push to child & parent to ready queue
+        manager.push_ready(child_pid);
+        // FIXME: switch to next process
+        manager.switch_next(context);
+        u16::from(child_pid)
+    })
+}
+
+pub fn sem_wait(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let pid = processor::current().get_pid().unwrap();
+        let ret = manager.current().write().sem_wait(key, pid);
+        match ret {
+            SemaphoreResult::Ok => context.set_rax(0),
+            SemaphoreResult::NotExist => context.set_rax(1),
+            SemaphoreResult::Block(pid) => {
+                // FIXME: save, block it, then switch to next
+                //        maybe use `save_current` and `switch_next`
+                manager.save_current(context);
+                manager.block(pid);
+                manager.switch_next(context);
+            }
+            _ => unreachable!(),
+        }
+    })
+}
+
+pub fn sem_signal(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let ret = manager.current().write().sem_signal(key);
+        match ret{
+            SemaphoreResult::WakeUp(pid) => manager.wakeup(pid),
+            SemaphoreResult::Ok => context.set_rax(114),
+            SemaphoreResult::NotExist => context.set_rax(514), // any
+            _ => unreachable!(),
+        }
+    })
+}
+
+pub fn new_sem(key: u32, value: usize) -> usize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        if get_process_manager().current().write().new_sem(key, value) {
+            0
+        } else {
+            1
+        }
+    })
+}
+
+pub fn remove_sem(key: u32) -> usize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        if get_process_manager().current().write().remove_sem(key) {
+            0
+        } else {
+            1
+        }
     })
 }

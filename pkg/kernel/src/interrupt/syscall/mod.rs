@@ -1,4 +1,5 @@
 use crate::memory::gdt::SYSCALL_INDX;
+use crate::wait;
 use crate::{memory::gdt, proc::*};
 use alloc::format;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -72,7 +73,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
         // pid: arg0 as u16 -> status: isize
         /* FIXME: check if the process is running or get retcode */
-        Syscall::WaitPid => { },
+        Syscall::WaitPid => {context.set_rax(sys_wait_pid(&args) as usize)},
 
         // None
          /* FIXME: list processes */
@@ -84,6 +85,14 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
         // 加分项 None -> u64
         Syscall::Time => {context.set_rax(sys_clock() as usize)},
+
+        // None -> pid: u16 or 0 or -1
+        Syscall::Fork => {
+            fork(context);
+        },
+
+        // op: u8, key: u32, val: usize -> ret: any
+        Syscall::Sem => sys_sem(&args, context),
 
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented

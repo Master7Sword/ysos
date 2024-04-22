@@ -13,7 +13,7 @@ pub struct ProcessContextValue {
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct ProcessContext {
-    value: ProcessContextValue,
+    pub value: ProcessContextValue,
 }
 
 impl ProcessContext {
@@ -31,7 +31,7 @@ impl ProcessContext {
     pub fn set_rax(&mut self, value: usize) {
         self.value.regs.rax = value;
     }
-
+    
     #[inline]
     pub fn save(&mut self, context: &ProcessContext) {
         self.value = context.as_ref().as_ptr().read();

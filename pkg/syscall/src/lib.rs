@@ -12,6 +12,8 @@ pub enum Syscall {
 
     GetPid = 39,
     
+    Sem = 57, // 自定义
+    Fork = 58,
     Spawn = 59,
     Exit = 60,
     WaitPid = 61,

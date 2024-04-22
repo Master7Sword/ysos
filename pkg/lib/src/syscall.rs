@@ -32,11 +32,15 @@ pub fn sys_read(fd: u8, buf: &mut [u8]) -> Option<usize> {
 }
 
 #[inline(always)]
-pub fn sys_wait_pid(pid: u16) -> isize {
+pub fn sys_wait_pid(pid: u16) -> usize {
     // FIXME: try to get the return value for process
     //        loop & halt until the process is finished
-
-    0
+    let mut res: usize = 0;
+    loop{
+        res = syscall!(Syscall::WaitPid, pid);
+        if res == 64 {break;}
+    }    
+    res
 }
 
 #[inline(always)]
@@ -73,7 +77,7 @@ pub fn sys_get_pid() -> u16 {
 #[inline(always)]
 pub fn sys_exit(pid: isize) /*-> !*/ {
     syscall!(Syscall::Exit, pid as u64);
-    //unreachable!("This process should be terminated by now.")
+    unreachable!("This process should be terminated by now.")
 }
 
 #[inline(always)]
@@ -81,4 +85,29 @@ pub fn sys_time() -> DateTime<Utc> {
     let time = syscall!(Syscall::Time) as i64;
     const BILLION: i64 = 1_000_000_000;
     DateTime::from_timestamp(time / BILLION, (time % BILLION) as u32).unwrap_or_default()
+}
+
+#[inline(always)]
+pub fn sys_fork() -> u16 {
+    syscall!(Syscall::Fork) as u16
+}
+
+#[inline(always)]
+pub fn sys_new_sem(key: u32, value: usize) -> bool {
+    syscall!(Syscall::Sem, 0, key as usize, value) == 0
+}
+
+#[inline(always)]
+pub fn sys_remove_sem(key: u32) -> bool {
+    syscall!(Syscall::Sem, 1, key as usize) == 0
+}
+
+#[inline(always)]
+pub fn sys_sem_signal(key: u32) -> bool {
+    syscall!(Syscall::Sem, 2, key as usize) == 0
+}
+
+#[inline(always)]
+pub fn sys_sem_wait(key: u32) -> bool {
+    syscall!(Syscall::Sem, 3, key as usize) == 0
 }

@@ -5,6 +5,7 @@ use x86_64::structures::paging::{
     Page,
 };
 use crate::resource::ResourceSet;
+use crate::proc::sync::SemaphoreSet;
 
 use super::*;
 
@@ -21,6 +22,8 @@ pub struct ProcessData {
     pub(super) stack_memory_usage: usize,
 
     pub(super) resources: Arc<RwLock<ResourceSet>>,
+
+    pub(super) semaphores: Arc<RwLock<SemaphoreSet>>,
 }
 
 impl Default for ProcessData {
@@ -31,6 +34,7 @@ impl Default for ProcessData {
             code_segments:None,
             stack_memory_usage: 0,
             resources: Arc::new(RwLock::new(ResourceSet::default())),
+            semaphores: Arc::new(RwLock::new(SemaphoreSet::default())),
         }
     }
 }

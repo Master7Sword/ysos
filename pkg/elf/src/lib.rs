@@ -6,6 +6,7 @@ extern crate alloc;
 
 use core::ptr::{copy_nonoverlapping, write_bytes};
 
+use x86_64::registers::debug;
 use x86_64::structures::paging::page::{PageRange,PageRangeInclusive};
 use x86_64::structures::paging::{mapper::*, *};
 use x86_64::{align_up, PhysAddr, VirtAddr};
@@ -74,14 +75,14 @@ pub fn map_range(
         }
     }
 
-    trace!(
-        "Map hint: {:#x} -> {:#x}",
-        addr,
-        page_table
-            .translate_page(range_start)
-            .unwrap()
-            .start_address()
-    );
+    // debug!(
+    //     "Map hint: {:#x} -> {:#x}",
+    //     addr,
+    //     page_table
+    //         .translate_page(range_start)
+    //         .unwrap()
+    //         .start_address()
+    // );
 
     Ok(Page::range(range_start, range_end))
 }
@@ -239,4 +240,20 @@ fn load_segment(
     }
 
     Ok(pages)
+}
+
+/// Clone a range of memory
+///
+/// - `src_addr`: the address of the source memory
+/// - `dest_addr`: the address of the target memory
+/// - `size`: the count of pages to be cloned
+pub fn clone_range(src_addr: u64, dest_addr: u64, size: usize) {
+    debug!("Clone range: {:#X} -> {:#X}", src_addr, dest_addr);
+    unsafe {
+        copy_nonoverlapping::<u8>(
+            src_addr as *mut u8,
+            dest_addr as *mut u8,
+            size * Size4KiB::SIZE as usize,
+        );
+    } 
 }
